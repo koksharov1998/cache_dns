@@ -44,7 +44,6 @@ client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 while True:
     request, address = server.recvfrom(2048)
     x = dnslib.DNSRecord.parse(request)
-    # print(x)
 
     if cache.get((x.questions[0].qname, x.questions[0].qtype)):
         print('cache!')
@@ -52,18 +51,15 @@ while True:
         response = dnslib.DNSRecord(header, x.questions, cache.get((x.questions[0].qname, x.questions[0].qtype))[0])
         server.sendto(response.pack(), address)
     else:
-        print(x)
         try:
             client.sendto(request, (forwarder, 53))
             response_from_dns, _ = client.recvfrom(2048)
             y = dnslib.DNSRecord.parse(response_from_dns)
-            print(y)
             cache[(y.questions[0].qname, y.questions[0].qtype)] = y.rr, time.time()
-            print()
-            print(y.auth)
-            print()
             if y.auth:
                 cache[(y.auth[0].rname, y.auth[0].rtype)] = y.auth, time.time()
+            for additional in y.ar:
+                cache[(additional.rname, additional.rtype)] = [additional], time.time()
             save_cache(cache)
             header = dnslib.DNSHeader(x.header.id, q=1,
                                       a=len(cache.get((x.questions[0].qname, x.questions[0].qtype))[0]))
