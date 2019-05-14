@@ -1,51 +1,85 @@
 import json
 import socket
-import dnslib
 
-PORT = 53
-IP = '127.0.0.1'
+import dnslib
 
 # ns1.e1.ru
 FORWARDER = '212.193.163.6'
 
 
-def save_cache(cache):
+def get_forwarder():
+    new_forwarder = input()
+    if new_forwarder:
+        return new_forwarder
+    else:
+        return FORWARDER
+
+
+# forwarder = get_forwarder()
+forwarder = FORWARDER
+
+
+def save_cache(data):
     file = open('cache.json', 'w')
-    json.dump(cache, file)
+    json.dump(data, file)
     file.close()
 
 
-try:
-    file = open('cache.json', 'r')
-    cache = json.load(file)
-    file.close()
-except:
-    cache = {}
+def load_cache():
+    try:
+        file = open('cache.json', 'r')
+        new_cache = json.load(file)
+        file.close()
+        return new_cache
+    except:
+        return {}
 
+
+cache = load_cache()
 server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server.bind(('127.0.0.1', PORT))
+server.bind(('127.0.0.1', 53))
 
 
-def create_response(data):
-    id = data[:2]
-    str_id = ''
-    for byte in id:
-        str_id += str(byte)
-    print(str_id)
+def parse_data(data):
+    id = ''
+    for byte in data[:2]:
+        id += str(byte)
+    print('ID: ' + id)
+
+    print(bin(ord(str(data[2]))))
+    # qr = bin(ord(data[2]))
+    # print(qr)
+
+    questions_count = ''
+    for byte in data[5:7]:
+        questions_count += str(byte)
+    print('Questions count: ' + questions_count)
     return b'dfs'
 
 
 while True:
-    request, addr = server.recvfrom(1024)
-    print(request)
-    print(dnslib.DNSRecord.parse(request))
+    request, address = server.recvfrom(2048)
+    x = dnslib.DNSRecord.parse(request)
+    '''
+    if x.header.qr:
+        print(x.questions)
+    else:
+        print(x.questions)
+    '''
+    # dnslib.QR
+    print(x)
+    print(x.questions)
+    print(x.ar)
+    print()
 
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    client.sendto(request, (FORWARDER, PORT))
-    response, addr2 = client.recvfrom(1024)
+    client.sendto(request, (forwarder, 53))
+    response, addr2 = client.recvfrom(2048)
+    y = dnslib.DNSRecord.parse(response)
+    print(y)
+    print(y.questions)
+    print(y.ar)
+    print(y.rr)
+    print(y.auth)
     print()
-    create_response(request)
-    print(response)
-    print(dnslib.DNSRecord.parse(response))
-    #response = create_response(request)
-    server.sendto(response, addr)
+    server.sendto(response, address)
