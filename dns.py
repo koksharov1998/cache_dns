@@ -30,6 +30,7 @@ def load_cache():
         file = open('cache', 'rb')
         new_cache = pickle.load(file)
         file.close()
+        print(new_cache)
         return new_cache
     except:
         return {}
@@ -40,27 +41,10 @@ server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server.bind(('127.0.0.1', 53))
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-
-def parse_data(data):
-    id = ''
-    for byte in data[:2]:
-        id += str(byte)
-    print('ID: ' + id)
-
-    print(bin(ord(str(data[2]))))
-    # qr = bin(ord(data[2]))
-    # print(qr)
-
-    questions_count = ''
-    for byte in data[5:7]:
-        questions_count += str(byte)
-    print('Questions count: ' + questions_count)
-    return b'dfs'
-
-
 while True:
     request, address = server.recvfrom(2048)
     x = dnslib.DNSRecord.parse(request)
+    print(x)
 
     if cache.get((x.questions[0].qname, x.questions[0].qtype)):
         print('cache!')
@@ -71,28 +55,9 @@ while True:
         client.sendto(request, (forwarder, 53))
         response_from_dns, _ = client.recvfrom(2048)
         y = dnslib.DNSRecord.parse(response_from_dns)
+        print(y)
         cache[(y.questions[0].qname, y.questions[0].qtype)] = y.rr
         save_cache(cache)
         header = dnslib.DNSHeader(x.header.id, q=1, a=len(cache.get((x.questions[0].qname, x.questions[0].qtype))))
         response = dnslib.DNSRecord(header, x.questions, cache.get((x.questions[0].qname, x.questions[0].qtype)))
         server.sendto(response.pack(), address)
-
-    '''
-    print(x)
-    print(x.questions[0])
-    print(x.ar)
-    print()
-    '''
-    #client.sendto(request, (forwarder, 53))
-    #response, addr2 = client.recvfrom(2048)
-    #y = dnslib.DNSRecord.parse(response)
-    '''
-    print(y)
-    print(y.questions)
-    print(y.ar)
-    print(y.rr)
-    print(y.auth)
-    print()
-    '''
-    #server.sendto(response, address)
-    #save_cache(cache)
