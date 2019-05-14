@@ -20,14 +20,14 @@ forwarder = FORWARDER
 
 
 def save_cache(data):
-    file = open('cache', 'w')
+    file = open('cache', 'wb')
     pickle.dump(data, file)
     file.close()
 
 
 def load_cache():
     try:
-        file = open('cache', 'r')
+        file = open('cache', 'rb')
         new_cache = pickle.load(file)
         file.close()
         return new_cache
@@ -72,7 +72,7 @@ while True:
         response_from_dns, _ = client.recvfrom(2048)
         y = dnslib.DNSRecord.parse(response_from_dns)
         cache[(y.questions[0].qname, y.questions[0].qtype)] = y.rr
-        # save_cache(cache)
+        save_cache(cache)
         header = dnslib.DNSHeader(x.header.id, q=1, a=len(cache.get((x.questions[0].qname, x.questions[0].qtype))))
         response = dnslib.DNSRecord(header, x.questions, cache.get((x.questions[0].qname, x.questions[0].qtype)))
         server.sendto(response.pack(), address)
